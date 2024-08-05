@@ -1,0 +1,177 @@
+{% load static %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Detection</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: white;
+            color: #333;
+            text-align: center;
+            padding: 0;
+            margin-right: 10%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 750px;
+            width: 50%;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100%;
+        }
+        .header {
+            margin-top: 20px;
+        }
+        .camera-button {
+            background-color: #3b82f6;
+            border: none;
+            border-radius: 50px;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        .camera-button:hover {
+            background-color: #2563eb;
+        }
+        .camera-icon {
+            font-size: 80px;
+            margin-bottom: 10px;
+        }
+        .illustration {
+            margin-top: 30px;
+            width: 250px;
+            height: auto;
+        }
+        .microphone-icon {
+            position: absolute;
+            bottom: 20px;
+            font-size: 40px;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="camera-icon">📷</div>
+        </div>
+        
+
+    <video id="webcam" autoplay muted playsinline></video>
+    <script>
+        async function loadModel() {
+    console.log('Loading model...');
+    return await cocoSsd.load();
+}
+
+async function startObjectDetection() {
+    const model = await loadModel();
+    const video = document.getElementById('webcam');
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        video.addEventListener('loadeddata', async () => {
+            console.log('Video loaded, starting object detection...');
+            detectObjects(model, video);
+        });
+    }
+}
+
+function setFemaleVoice() {
+    return new Promise(resolve => {
+        const voices = window.speechSynthesis.getVoices();
+        console.log("Available voices:", voices);
+        const femaleVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes("zira") || 
+            voice.name.toLowerCase().includes("female") || 
+            voice.name.toLowerCase().includes("woman") || 
+            voice.name.toLowerCase().includes("girl")
+        );
+
+        if (!femaleVoice) {
+            console.log("Female voice not found, using default voice.");
+            resolve(voices[0]); // Fallback to the first available voice
+        } else {
+            resolve(femaleVoice);
+        }
+    });
+}
+
+async function detectObjects(model, video) {
+    const predictions = await model.detect(video);
+    console.log('Predictions:', predictions); // Log predictions to debug
+
+    const femaleVoice = await setFemaleVoice();
+
+    if (predictions.length === 0) {
+        const noObjectsDetected = "No objects detected.";
+        const utterance = new SpeechSynthesisUtterance(noObjectsDetected);
+        if (femaleVoice) {
+            utterance.voice = femaleVoice;
+        }
+        window.speechSynthesis.speak(utterance);
+        requestAnimationFrame(() => detectObjects(model, video));
+        return;
+    }
+
+    predictions.forEach(prediction => {
+        const { class: objectName, bbox: [x, y, width, height] } = prediction;
+
+        // Calculate the horizontal position of the object
+        const videoWidth = video.videoWidth;
+        let positionDescriptor = '';
+
+        if (x + width < videoWidth / 3) {
+            positionDescriptor = 'left';
+        } else if (x > (videoWidth / 3) * 2) {
+            positionDescriptor = 'right';
+        } else {
+            positionDescriptor = 'center';
+        }
+
+        // Improved distance estimation
+        const calibrationFactor = 5000;
+        const size = width * height;
+        const distance = size > 0 ? Math.round(calibrationFactor / size) : 'unknown';
+
+        // Construct the description with the object name, position, and distance
+        const description = `Object: ${objectName}, Position: ${positionDescriptor}, Distance: ${distance === 'unknown' ? 'unknown' : distance + ' units'}`;
+
+        console.log(description); // Log the description to debug
+
+        // Use Speech Synthesis to announce the description
+        const utterance = new SpeechSynthesisUtterance(description);
+        if (femaleVoice) {
+            utterance.voice = femaleVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+    });
+    requestAnimationFrame(() => detectObjects(model, video));
+}
+
+window.onload = startObjectDetection;
+
+    </script>
+</body>
+</html>

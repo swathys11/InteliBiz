@@ -1,0 +1,171 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #e9ecef;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #495057;
+        }
+        .weather-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #343a40;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 500;
+        }
+        .weather-info {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .weather-info img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 10px;
+        }
+        .weather-info p {
+            font-size: 18px;
+            margin: 5px 0;
+        }
+        .loading-message, .error-message {
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        .loading-message {
+            color: #007bff;
+        }
+        .error-message {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="weather-container">
+        <h1>Weather Forecast</h1>
+        <p id="loading" class="loading-message">Please wait...</p>
+        <div id="weather-info" class="weather-info">
+            <p id="weather-description"></p>
+            <img id="weather-image" src="" alt="Weather Icon">
+        </div>
+        <p id="error-message" class="error-message" style="display: none;"></p>
+    </div>
+
+    <script>
+        function setFemaleVoice(utterance) {
+            // Wait for voices to be loaded
+            window.speechSynthesis.onvoiceschanged = function() {
+                var voices = window.speechSynthesis.getVoices();
+                var femaleVoice = voices.find(voice => 
+                    voice.name.toLowerCase().includes("zira") || 
+                    voice.name.toLowerCase().includes("female") || 
+                    voice.name.toLowerCase().includes("woman") || 
+                    voice.name.toLowerCase().includes("girl") ||
+                    voice.name.toLowerCase().includes("uk") || 
+                    voice.voiceURI.toLowerCase().includes("female")
+                );
+                
+                if (femaleVoice) {
+                    utterance.voice = femaleVoice;
+                } else {
+                    console.log("Female voice not found, using default voice.");
+                }
+                // Speak the utterance once the voice is set
+                window.speechSynthesis.speak(utterance);
+            };
+        }
+
+        window.onload = function() {
+            var askCity = new SpeechSynthesisUtterance("Please tell me the name of the city you want the weather forecast for.");
+            setFemaleVoice(askCity);
+
+            askCity.onend = function() {
+                var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onresult = async function(event) {
+                    var city = event.results[0][0].transcript.toLowerCase().trim();
+                    console.log('City:', city); // Debugging line
+                    document.getElementById('loading').textContent = `Fetching weather data for ${city}...`;
+
+                    const apiKey = 'c77a551c06a24ddaae1102613243007'; // Replace with your OpenWeatherMap API key
+                    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
+
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+
+                        if (data.cod === 200) { // Check if the response code is OK
+                            const weatherDescription = data.weather[0].description;
+                            const temperature = Math.round(data.main.temp); // Temperature in Celsius
+                            const weatherIcon = `http://openweathermap.org/img/wn/${data.weather[0].icon}.png`;
+                            const description = `The weather in ${city} is ${weatherDescription} with a temperature of ${temperature} degrees Celsius.`;
+
+                            document.getElementById('weather-description').textContent = description;
+                            document.getElementById('weather-image').src = weatherIcon;
+                            document.getElementById('weather-info').style.display = 'block';
+                            document.getElementById('loading').style.display = 'none';
+
+                            const utterance = new SpeechSynthesisUtterance(description);
+                            setFemaleVoice(utterance);
+                        } else {
+                            const errorMessage = `Weather data not found for ${city}. Error: ${data.message}`;
+                            document.getElementById('error-message').textContent = errorMessage;
+                            document.getElementById('error-message').style.display = 'block';
+                            document.getElementById('loading').style.display = 'none';
+
+                            const utterance = new SpeechSynthesisUtterance(errorMessage);
+                            setFemaleVoice(utterance);
+                        }
+                    } catch (error) {
+                        const errorMessage = 'Error fetching weather data. Please try again later.';
+                        document.getElementById('error-message').textContent = errorMessage;
+                        document.getElementById('error-message').style.display = 'block';
+                        document.getElementById('loading').style.display = 'none';
+                        console.error('Fetch error:', error);
+
+                        const utterance = new SpeechSynthesisUtterance(errorMessage);
+                        setFemaleVoice(utterance);
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    const errorMessage = 'Speech recognition error. Please try again.';
+                    document.getElementById('error-message').textContent = errorMessage;
+                    document.getElementById('error-message').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+
+                    const utterance = new SpeechSynthesisUtterance(errorMessage);
+                    setFemaleVoice(utterance);
+                };
+
+                recognition.start();
+            };
+        };
+    </script>
+</body>
+</html>

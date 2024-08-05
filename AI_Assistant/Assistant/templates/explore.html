@@ -1,0 +1,448 @@
+<!-- {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore - AI Laika</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            margin: 35%;
+            margin-top: 0rem;
+            height: 820px;
+        }
+        .explore-container {
+            padding: 20px;
+        }
+        .explore-item {
+            background-color: #fff;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+        }
+        .explore-item h2 {
+            color: #333;
+        }
+        .explore-item p {
+            color: #666;
+        }
+        .explore-item.email-assist {
+            background-color: #e0f7da;
+        }
+        .explore-item.object-detection {
+            background-color: #e1bee7;
+        }
+        .explore-item.weather-forecasting {
+            background-color: #b3e5fc;
+        }
+        #microphone-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        .microphone-icon img {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="explore-container">
+        <h1>EXPLORE</h1>
+        <div class="explore-item email-assist">
+            <h2>Email Assist</h2>
+            <p>I help you stay connected with others through our email sending service. Whether you need to send a quick message or a detailed email, I’m here to assist you every step of the way.</p>
+        </div>
+        <div class="explore-item object-detection">
+            <h2>Object Detection</h2>
+            <p>I help you navigate and understand your surroundings with our object detection service & provide you with real-time descriptions of objects around you, making your environment more accessible and easier to interact with.</p>
+        </div>
+        <div class="explore-item weather-forecasting">
+            <h2>Weather Forecasting</h2>
+            <p>I provide real-time weather updates to keep you informed. From temperature to forecasts, I've got you covered. Just ask, 'Weather,' to get started.</p>
+        </div>
+        <button id="microphone-button">
+            <div class="microphone-icon">
+                <img src="{% static 'image/mic.png' %}" alt="Microphone">
+            </div>
+        </button>
+    </div>
+
+    <script>
+        window.onload = function() {
+            var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;
+            recognition.interimResults = false;
+
+            var isSpeaking = false;
+
+            function startRecognition() {
+                if (!isSpeaking) {
+                    recognition.start();
+                }
+            }
+
+            function handleCommand(command) {
+                command = command.toLowerCase();
+                let message = "";
+                let navigate = false;
+
+                if (command.includes('object detection')) {
+                    window.location.href = '/object/';
+                    navigate = true;
+                } else if (command.includes('weather')) {
+                    window.location.href = '/weather/';
+                    navigate = true;
+                } else if (command.includes('current time')) {
+                    var now = new Date();
+                    var hours = now.getHours();
+                    var minutes = now.getMinutes();
+                    var period = 'AM';
+
+                    if (hours >= 12) {
+                        period = 'PM';
+                        if (hours > 12) hours -= 12;
+                    }
+                    if (hours === 0) hours = 12;
+                    if (minutes < 10) minutes = '0' + minutes;
+
+                    message = `The current time is ${hours}:${minutes} ${period}`;
+                } else if (command.includes('sing a song')) {
+                    message = "I am not a singer, but I can sing a song for you. La la lalalala, la la la, la la la laaaaiyykaaa";
+                } else if (command.includes('my birthday')) {
+                    message = "Many many happy returns of the day from the Laika community!";
+                } else if (command.includes('who developed you')) {
+                    message = "I was developed by Swathy S, Soorya S, and Adithya Lekshmi";
+                } else if (command.includes('who are you')) {
+                    message = "I am Laika, your voice assistant developed by Team Intellibiz";
+                } else if (command.includes('food')) {
+                    message = "Thank you! As an AI assistant, I don't need food, but I appreciate your concern. How can I assist you today?";
+                } else if (command.includes('tell me a joke')) {
+                    fetch('https://v2.jokeapi.dev/joke/Any?type=single')
+                        .then(response => response.json())
+                        .then(data => {
+                            var joke = data.joke || "I don't have a joke at the moment.";
+                            speak(joke);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching joke:', error);
+                            speak("I couldn't fetch a joke right now.");
+                        });
+                    return;
+                }
+
+                if (!navigate) {
+                    speak(message);
+                }
+            }
+
+            function speak(message) {
+                if (!message) return;
+                isSpeaking = true;
+                recognition.stop();
+                var utterance = new SpeechSynthesisUtterance(message);
+                utterance.onend = function() {
+                    isSpeaking = false;
+                    startRecognition();
+                };
+                window.speechSynthesis.speak(utterance);
+            }
+
+            recognition.onresult = function(event) {
+                var command = event.results[event.results.length - 1][0].transcript;
+                handleCommand(command);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+            };
+
+            recognition.onend = function() {
+                startRecognition();
+            };
+
+            // Start speech synthesis
+            var utterance = new SpeechSynthesisUtterance("How can I help you? Which one you want: Email Assistant, Object Detection, Weather forecast, or what else do you want to know...");
+            utterance.onend = function() {
+                startRecognition();
+            };
+            function setFemaleVoice() {
+                var voices = window.speechSynthesis.getVoices();
+                // Try to find a voice that sounds female, based on common female voice names
+                var femaleVoice = voices.find(voice => 
+                    voice.name.toLowerCase().includes("zira") || 
+                    voice.name.toLowerCase().includes("female") || 
+                    voice.name.toLowerCase().includes("woman") || 
+                    voice.name.toLowerCase().includes("girl") ||
+                    voice.name.toLowerCase().includes("uk") || 
+                    voice.voiceURI.toLowerCase().includes("female")
+                );
+                
+                if (femaleVoice) {
+                    utterance.voice = femaleVoice;
+                } else {
+                    console.log("Female voice not found, using default voice.");
+                }
+                
+                window.speechSynthesis.speak(utterance);
+            }
+
+            if (window.speechSynthesis.getVoices().length === 0) {
+                window.speechSynthesis.onvoiceschanged = setFemaleVoice;
+            } else {
+                setFemaleVoice();
+            }
+            window.speechSynthesis.speak(utterance);
+        };
+    </script>
+</body>
+</html> 
+
+ -->
+
+
+ {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore - AI Laika</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            margin: 35%;
+            margin-top: 0rem;
+            height: 820px;
+        }
+        .explore-container {
+            padding: 20px;
+        }
+        .explore-item {
+            background-color: #fff;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+        }
+        .explore-item h2 {
+            color: #333;
+        }
+        .explore-item p {
+            color: #666;
+        }
+        .explore-item.email-assist {
+            background-color: #e0f7da;
+        }
+        .explore-item.object-detection {
+            background-color: #e1bee7;
+        }
+        .explore-item.weather-forecasting {
+            background-color: #b3e5fc;
+        }
+        #microphone-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        .microphone-icon img {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="explore-container">
+        <h1>EXPLORE</h1>
+        <div class="explore-item email-assist">
+            <h2>Email Assist</h2>
+            <p>I help you stay connected with others through our email sending service. Whether you need to send a quick message or a detailed email, I’m here to assist you every step of the way.</p>
+        </div>
+        <div class="explore-item object-detection">
+            <h2>Object Detection</h2>
+            <p>I help you navigate and understand your surroundings with our object detection service & provide you with real-time descriptions of objects around you, making your environment more accessible and easier to interact with.</p>
+        </div>
+        <div class="explore-item weather-forecasting">
+            <h2>Weather Forecasting</h2>
+            <p>I provide real-time weather updates to keep you informed. From temperature to forecasts, I've got you covered. Just ask, 'Weather,' to get started.</p>
+        </div>
+        <button id="microphone-button">
+            <div class="microphone-icon">
+                <img src="{% static 'image/mic.png' %}" alt="Microphone">
+            </div>
+        </button>
+    </div>
+
+    <script>
+        window.onload = function() {
+            var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;
+            recognition.interimResults = false;
+
+            var isSpeaking = false;
+            var femaleVoice = null;
+
+            function startRecognition() {
+                if (!isSpeaking) {
+                    console.log("Starting speech recognition...");
+                    recognition.start();
+                }
+            }
+
+            function handleCommand(command) {
+                command = command.toLowerCase();
+                let message = "";
+                let navigate = false;
+
+                if (command.includes('object detection')) {
+                    window.location.href = '/object/';
+                    navigate = true;
+                } else if (command.includes('weather')) {
+                    window.location.href = '/weather/';
+                    navigate = true;
+                } else if (command.includes('current time')) {
+                    var now = new Date();
+                    var hours = now.getHours();
+                    var minutes = now.getMinutes();
+                    var period = 'AM';
+
+                    if (hours >= 12) {
+                        period = 'PM';
+                        if (hours > 12) hours -= 12;
+                    }
+                    if (hours === 0) hours = 12;
+                    if (minutes < 10) minutes = '0' + minutes;
+
+                    message = `The current time is ${hours}:${minutes} ${period}`;
+                } else if (command.includes('sing a song')) {
+                    message = "I am not a singer, but I can sing a song for you. La la lalalala, la la la, la la la laaaaiyykaaa";
+                } else if (command.includes('my birthday')) {
+                    message = "Many many happy returns of the day from the Laika community!";
+                } else if (command.includes('who developed you')) {
+                    message = "I was developed by Swathy S, Soorya S, and Adithya Lekshmi";
+                } else if (command.includes('who are you')) {
+                    message = "I am Laika, your voice assistant developed by Team Intellibiz";
+                } else if (command.includes('food')) {
+                    message = "Thank you! As an AI assistant, I don't need food, but I appreciate your concern. How can I assist you today?";
+                } else if (command.includes('tell me a joke')) {
+                    fetch('https://v2.jokeapi.dev/joke/Any?type=single')
+                        .then(response => response.json())
+                        .then(data => {
+                            var joke = data.joke || "I don't have a joke at the moment.";
+                            speak(joke);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching joke:', error);
+                            speak("I couldn't fetch a joke right now.");
+                        });
+                    return;
+                }
+
+                if (!navigate) {
+                    speak(message);
+                }
+            }
+
+            function speak(message) {
+                if (!message) return;
+                console.log("Speaking message:", message);
+                isSpeaking = true;
+                recognition.stop();
+                var utterance = new SpeechSynthesisUtterance(message);
+                if (femaleVoice) {
+                    utterance.voice = femaleVoice;
+                }
+                utterance.onend = function() {
+                    isSpeaking = false;
+                    startRecognition();
+                };
+                utterance.onerror = function(event) {
+                    console.error('Speech synthesis error:', event);
+                };
+                window.speechSynthesis.speak(utterance);
+            }
+
+            recognition.onresult = function(event) {
+                console.log("Speech recognition result:", event.results);
+                var command = event.results[event.results.length - 1][0].transcript;
+                console.log("Recognized command:", command);
+                handleCommand(command);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+            };
+
+            recognition.onend = function() {
+                startRecognition();
+            };
+
+            function setFemaleVoice() {
+                var voices = window.speechSynthesis.getVoices();
+                console.log("Available voices:", voices);
+                femaleVoice = voices.find(voice => 
+                    voice.name.toLowerCase().includes("zira") || 
+                    voice.name.toLowerCase().includes("female") || 
+                    voice.name.toLowerCase().includes("woman") || 
+                    voice.name.toLowerCase().includes("girl") ||
+                    voice.voiceURI.toLowerCase().includes("female")
+                );
+
+                if (!femaleVoice) {
+                    console.log("Female voice not found, using default voice.");
+                    femaleVoice = voices[0]; // Fallback to the first available voice
+                }
+            }
+
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = function() {
+                    console.log("Voices changed, setting female voice...");
+                    setFemaleVoice();
+                    var initialUtterance = new SpeechSynthesisUtterance("How can I help you? Which one you want: Email Assistant, Object Detection, Weather forecast, or what else do you want to know...");
+                    if (femaleVoice) {
+                        initialUtterance.voice = femaleVoice;
+                    }
+                    initialUtterance.onend = function() {
+                        startRecognition();
+                    };
+                    initialUtterance.onerror = function(event) {
+                        console.error('Initial speech synthesis error:', event);
+                    };
+                    window.speechSynthesis.speak(initialUtterance);
+                };
+            } else {
+                console.log("Voices changed event not supported, setting voice...");
+                setFemaleVoice();
+                var initialUtterance = new SpeechSynthesisUtterance("How can I help you? Which one you want: Email Assistant, Object Detection, Weather forecast, or what else do you want to know...");
+                if (femaleVoice) {
+                    initialUtterance.voice = femaleVoice;
+                }
+                initialUtterance.onend = function() {
+                    startRecognition();
+                };
+                initialUtterance.onerror = function(event) {
+                    console.error('Initial speech synthesis error:', event);
+                };
+                window.speechSynthesis.speak(initialUtterance);
+            }
+        };
+    </script>
+</body>
+</html>
+
